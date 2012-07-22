@@ -1,0 +1,207 @@
+
+; TODO
+; Don't use sql_2008...exe to uninstall, use setup.exe in
+; - C:\Program Files\Microsoft SQL Server\100\Setup Bootstrap\SQLServer2008R2\setup.exe
+; - Selective uninstall.
+; Windows XP Checks:
+;  - Windows Installer 4.5 (KB942288-v3) http://go.microsoft.com/fwlink/?LinkId=159623 http://www.microsoft.com/download/en/details.aspx?displaylang=en&id=8483
+;  - Windows PowerShell 1.0 min (KB926139)
+; - Check PendingFileRenameOperations for items.
+;
+
+All Windows (Server too) (Server has features for .net and powershell)
+- .net role
+- installer 4.5
+- powershell
+
+#define SQLITE_OK           0   /* Successful result */
+/* beginning-of-error-codes */
+	#define SQLITE_ERROR        1   /* SQL error or missing database */
+	#define SQLITE_INTERNAL     2   /* Internal logic error in SQLite */
+	#define SQLITE_PERM         3   /* Access permission denied */
+	#define SQLITE_ABORT        4   /* Callback routine requested an abort */
+	#define SQLITE_BUSY         5   /* The database file is locked */
+	#define SQLITE_LOCKED       6   /* A table in the database is locked */
+	#define SQLITE_NOMEM        7   /* A malloc() failed */
+	#define SQLITE_READONLY     8   /* Attempt to write a readonly database */
+	#define SQLITE_INTERRUPT    9   /* Operation terminated by sqlite3_interrupt()*/
+	#define SQLITE_IOERR       10   /* Some kind of disk I/O error occurred */
+	#define SQLITE_CORRUPT     11   /* The database disk image is malformed */
+	#define SQLITE_NOTFOUND    12   /* Unknown opcode in sqlite3_file_control() */
+	#define SQLITE_FULL        13   /* Insertion failed because database is full */
+	#define SQLITE_CANTOPEN    14   /* Unable to open the database file */
+	#define SQLITE_PROTOCOL    15   /* Database lock protocol error */
+	#define SQLITE_EMPTY       16   /* Database is empty */
+	#define SQLITE_SCHEMA      17   /* The database schema changed */
+	#define SQLITE_TOOBIG      18   /* String or BLOB exceeds size limit */
+	#define SQLITE_CONSTRAINT  19   /* Abort due to constraint violation */
+	#define SQLITE_MISMATCH    20   /* Data type mismatch */
+	#define SQLITE_MISUSE      21   /* Library used incorrectly */
+	#define SQLITE_NOLFS       22   /* Uses OS features not supported on host */
+	#define SQLITE_AUTH        23   /* Authorization denied */
+	#define SQLITE_FORMAT      24   /* Auxiliary database format error */
+	#define SQLITE_RANGE       25   /* 2nd parameter to sqlite3_bind out of range */
+	#define SQLITE_NOTADB      26   /* File opened that is not a database file */
+	#define SQLITE_ROW         100  /* sqlite3_step() has another row ready */
+	#define SQLITE_DONE        101  /* sqlite3_step() has finished executing */
+/* end-of-error-codes */
+
+findings:
+
+Win Server 2003 and R2 MUST be restarted, no skipping.
+
+- server 2008 r2 64-bit
+	- Successful install/uninstall.
+
+- Windows 7
+	- minimum sp1 installed.
+	- no 3.5 .NET install.
+
+ - 2003 R2 
+ -- seems to require two restarts.
+ -- GoldMine manual uninstall.
+ -- WMI Windows Installer Provider (Windows Components) (required to auto uninstall goldmine)
+ -- powershell doesn't install sometimes.
+
+ -- 2003
+	- seemingly no problems yet.
+
+-- x64 XP requires forced restart after installations.
+
+259545952
+200000000
+x64 - File size: 259545952 bytes.
+x86 - File size: 246929248 bytes.
+
+File size: 259545952 bytes.
+File size: 246929248 bytes.
+Completed
+
+http://nsis.sourceforge.net/Include/WinVer.nsh
+
+servermanagercmd options and names.
+http://www.techrepublic.com/blog/datacenter/install-windows-server-2008-features-with-servermanagercmd/294
+
+check 8 char length username
+
+option: turn UAC back on.
+
+
+H3AwD4w
+_SQL_ADMIN_PASSWORD="ZIEW6 %-::1$"
+
+Check if file exists after downloaded and before asking, sometimes it doesn't report back properly coded result codes.
+
+
+
+
+ReadRegDWORD $0 HKLM Software\AutoSQL "XPPSISDone"
+StrCmp $0 "1" OSPass
+
+
+inetc::get /POPUP "VMware Download" /caption "2005 report" /canceltext "interrupt!" http://www.iarp.ca/lib/private/VMWARE/vmware_workstation_8.0.0.471780.exe "C:\temp\vmware_workstation_8.0.0.471780.exe" /END
+
+WindowsXP-PowerShell-x64
+WindowsXP-PowerShell-x86
+WindowsXP-Installer45-x64
+WindowsXP-Installer45-x86
+dotnetx35setup
+
+
+DOWNLOAD_INSTALLER45_$DLINK_X64
+DOWNLOAD_POWERSHELL_$DLINK_X64
+DOWNLOAD_DOTNET35
+
+servermanagercmd -i PowerShell-ISE NET-Framework-Core -a
+1003 = already installed
+0 = success
+
+2003 requires restart before SQL will go.
+http://nsis.sourceforge.net/Include/WinVer.nsh
+http://www.binpress.com/license/edit/h/1656bfcf61e6c0cb1a6aa6ad2707e7e7782db2de
+
+$SMSTARTUP
+http://sqlite.org/c3ref/c_abort.html
+
+http://runtime-revolution.278305.n4.nabble.com/Windows-code-signing-td3217028.html
+
+http://nsis.sourceforge.net/Add-on_Custom_Installer_Sample_/w_InstallOptions
+http://stackoverflow.com/questions/488717/detecting-if-a-program-is-already-installed-with-nsis
+
+
+HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Microsoft SQL Server\Instance Names
+
+===============
+
+ReadRegStr $0 HKLM "SOFTWARE\Microsoft\MSSQLServer\MSSQLServer\CurrentVersion" "CurrentVersion"
+
+http://msdn.microsoft.com/en-us/library/ms144259.aspx
+
+sa 8G4puwQS
+
+=========================================================
+
+declare @user_name nvarchar(500);
+
+while (select COUNT(*) from sys.server_principals WHERE type = 'U' and is_disabled = '0' and name like '%'+@@SERVERNAME+'%') > 0
+begin
+	select top 1 @user_name = name from sys.server_principals WHERE type = 'U' and is_disabled = '0' and name like '%'+@@SERVERNAME+'%'
+	exec('ALTER LOGIN [' + @user_name + '] DISABLE');
+END
+
+
+=====
+
+
+declare @user_name nvarchar(500); while (select COUNT(*) from sys.server_principals WHERE type = 'U' and is_disabled = '0' and name like '%'+@@SERVERNAME+'%') > 0 begin select top 1 @user_name = name from sys.server_principals WHERE type = 'U' and is_disabled = '0' and name like '%'+@@SERVERNAME+'%'; exec('ALTER LOGIN [' + @user_name + '] DISABLE'); END
+
+sqlcmd.exe -S (local)\CRMTRIALSERVER -U sa -P goldmine -Q "declare @user_name nvarchar(500); while (select COUNT(*) from sys.server_principals WHERE type = 'U' and is_disabled = '0' and name like '%'+@@SERVERNAME+'%') > 0 begin select top 1 @user_name = name from sys.server_principals WHERE type = 'U' and is_disabled = '0' and name like '%'+@@SERVERNAME+'%'; exec('ALTER LOGIN [' + @user_name + '] DISABLE'); END"
+
+
+=========================================================
+
+
+Maximizer
+Max CRM 11 Entrepreneur (1.23GB) - http://download.maximizer.com/MaxCRM11/ET/MaximizerCRM_ET11.exe
+Max CRM 12 Trial (2.7GB) - http://download.maximizer.com/MaxCRM12/MaximizerCRM_V12_Server.zip
+MaxMobile Wireless Server 12 - http://download.maximizer.com/MaxCRM12/MaxMobileServer_V12.exe
+
+=========================================================
+
+Requirements:
+ - Windows XP (Service Pack 3 and above)
+ - Windows Vista (Service Pack 1 and above)
+ - Windows 7 (Service Pack 1 and above)
+ - Windows Server 2003
+ - Windows Server 2003 R2
+ - Windows Server 2008
+ - Windows Server 2008 R2
+ - Windows Vista, 7, 2008, 2008 R2, UAC needs to be disabled. Installer will ask you to do this, and then ask to enable it after it's done.
+ - All windows updates complete.
+ - No previous GoldMine versions installed.
+ - Internet Access or previously downloaded and saved copy for:
+   - 2008 R2 Express (Approx. 253,463 KB for X64 and 241,142 KB for X86)
+   - GoldMine (Approx. 80,840 KB)
+
+ - Minimum Powershell 1.0
+   - Built into Windows 7
+   - Added as a Feature in Windows Server 2008 and 2008 R2 (auto enabled by our installer)
+   - XP, Vista, 2003, 2003 R2 (auto installed by our installer)
+
+ - .NET 3.5
+   - Built into Windows 7
+   - Added as a Feature in Windows Server 2008 and 2008 R2 (auto enabled by our installer)
+   - XP, Vista, 2003, 2003 R2 (auto installed by our installer)
+ 
+ - Windows Installer 4.5
+   - Built into Windows 7
+   - XP, Vista, 2003, 2003 R2, 2008, 2008 R2 (auto installed by our installer)
+
+Recommendations:
+ - Fresh Windows Install
+  - If not fresh install, best not to have SQL already on there, unless it's 2008 R2.
+
+
+WriteRegDWORD - write reg if we disabled uac to begin with, then at the end of install check that reg so we don't
+	ask to reenable it if we didn't touch it.
+
