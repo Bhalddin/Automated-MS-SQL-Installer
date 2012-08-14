@@ -5,17 +5,20 @@ Var OSVersion
 Var SQLFileLoc
 
 # Update this to the location you have the nsi file currently.
-!define LOCAL_SAVE "Z:\Projects\Automated-MS-SQL-Installer"
+!define LOCAL_SAVE "D:\Gits\sqlinstall"
 
 !define /date MYTIMESTAMP "%Y-%m-%d %H:%M:%S"
 
-Name "Easy SQL Installer"
+Name "SQL Installer"
 OutFile "SQLInstall.exe"
 ShowInstDetails show
 
 #Titles
 	!define TITLE_SQL_2008R2 "Microsoft SQL 2008 R2 Express"
 	!define DESC_SQL_2008R2 "Installs ${TITLE_SQL_2008R2}"
+
+	!define TITLE_SQL_2012 "Microsoft SQL 2012 Express"
+	!define DESC_SQL_2012 "Installs ${TITLE_SQL_2012}"
 
 	# Mainly for the Windows update files. I have also packaged them into a zip
 	# You can download it at http://files.rpdatasystems.ca/winupdates/winupdates.zip
@@ -34,12 +37,17 @@ ShowInstDetails show
 	 * Comment out the other DOWNLOAD_SQL_ lines with a ; or #
 	 *
 	**/
-	!define DOWNLOAD_SQL_X86 "http://go.microsoft.com/fwlink/?LinkId=186785"	; 32-bit 2008 R2 Express
-	!define DOWNLOAD_SQL_X64 "http://go.microsoft.com/fwlink/?LinkId=186786"	; 64-bit 2008 R2 Express
+	!define DOWNLOAD_SQL2008R2_X86 "http://go.microsoft.com/fwlink/?LinkId=186785"	; 32-bit 2008 R2 Express
+	!define DOWNLOAD_SQL2008R2_X64 "http://go.microsoft.com/fwlink/?LinkId=186786"	; 64-bit 2008 R2 Express
+	
+	!define DOWNLOAD_SQL2012_X86 ""	; 32-bit 2012 Express
+	!define DOWNLOAD_SQL2012_X64 ""	; 64-bit 2012 Express
 
 	# Example of local web server hosting SQL
-	;!define DOWNLOAD_SQL_X86 "http://192.168.2.20/installers/SQLEXPRWT_x86_ENU.exe"	; 32-bit 2008 R2 Express
-	;!define DOWNLOAD_SQL_X64 "http://192.168.2.20/installers/SQLEXPRWT_x64_ENU.exe"	; 64-bit 2008 R2 Express
+	;!define DOWNLOAD_SQL2008R2_X86 "http://192.168.2.20/installers/SQLEXPRWT_x86_ENU.exe"	; 32-bit 2008 R2 Express
+	;!define DOWNLOAD_SQL2008R2_X64 "http://192.168.2.20/installers/SQLEXPRWT_x64_ENU.exe"	; 64-bit 2008 R2 Express
+	;!define DOWNLOAD_SQL2012_X86 "http://192.168.2.20/installers/"	; 32-bit 2012 R2 Express
+	;!define DOWNLOAD_SQL2012_X64 "http://192.168.2.20/installers/"	; 64-bit 2012 R2 Express
 
 	!define DOWNLOAD_INSTALLER45_2008_X64	"${URL_BASE}/winupdates/Windows6.0-KB942288-v2-x64.msu"
 	!define DOWNLOAD_INSTALLER45_2003_X64	"${URL_BASE}/winupdates/WindowsServer2003-KB942288-v4-x64.exe"
@@ -124,10 +132,109 @@ Section "${TITLE_SQL_2008R2}" SEC_SQL_2008R2
 
 	${If} ${RunningX64}
 		${Logs} 'SQL: Downloading 64-bit version'
-		inetc::get /caption "${TITLE_SQL_2008R2} 64-bit" /canceltext "Select File" ${DOWNLOAD_SQL_X64} "$SQLFileLoc" /END
+		inetc::get /caption "${TITLE_SQL_2008R2} 64-bit" /canceltext "Select File" ${DOWNLOAD_SQL2008R2_X64} "$SQLFileLoc" /END
 	${Else}
 		${Logs} 'SQL: Downloading 32-bit version'
-		inetc::get /caption "${TITLE_SQL_2008R2} 32-bit" /canceltext "Select File" ${DOWNLOAD_SQL_X86} "$SQLFileLoc" /END
+		inetc::get /caption "${TITLE_SQL_2008R2} 32-bit" /canceltext "Select File" ${DOWNLOAD_SQL2008R2_X86} "$SQLFileLoc" /END
+	${EndIf}
+	Pop $0
+	${Logs} 'SQL: Download status: $0'
+
+	StrCmp $0 "OK" PastSQLInstallerCheck
+	StrCmp $0 "Cancelled" 0
+	StrCmp $0 "Terminated" 0
+		DetailPrint "Download status: $0 - Check your internet connection and try again later"
+
+		; Sometimes if the download goes too fast it doesnt return a code and errors out, this will check for the file first.
+		IfFileExists "$SQLFileLoc" PastSQLInstallerCheck
+
+		Dialogs::Open "SQL Installer (*.exe)|*.exe|" "1" "Select the SQL installation file." $EXEDIR ${VAR_9}
+
+		# User just closed the Open File dialog, just quit now.
+		StrCmp $9 "0" SQLFailed
+
+		# User gave us a file, no way to check it so we'll just have to try and use it, and catch errors later.
+		StrCpy $SQLFileLoc $9
+		${Logs} 'SQL: Selected $SQLFileLoc as installer.'
+	
+	PastSQLInstallerCheck:
+
+	Push "$SQLFileLoc"
+	Call FileSizeNew
+	Pop $0
+	${Logs} 'SQL: File size - $0 bytes.'
+
+	IntCmp $0 200000000 sqlmorethan sqllessthan sqlmorethan # equal lessthan morethan
+	sqllessthan:
+		${Logs} 'SQL: File size too small to be proper installer.'
+		Goto SQLCorrupt
+	sqlmorethan:
+
+	File "${LOCAL_SAVE}\SQLConfig.ini"
+
+	${Logs} 'SQL: Launch Installer'
+	# If you go and change the password. Windows 7, Server 2008/2008R2 will error out with non-complex passwords. Which requires capitals, numbers, or special characters.
+	# My suggestion would be to leave it be as PassWord123 works, and change the password in the dialog that asks for it during install.
+	ExecWait '$SQLFileLoc /INSTANCENAME="$sqlinstance" /INSTANCEID="$sqlinstance" /SAPWD="PassWord123" /configurationfile="$TEMP\AutoSQL\SQLConfig.ini"' $1
+
+	${Logs} 'SQL: Installer Exit Code: $1'
+	StrCmp $1 "0" SQLCleared
+	StrCmp $1 "2" SQLCorrupt
+	StrCmp $1 "1223" SQLFailed
+
+	SQLFailed:
+		${Logs} 'SQL: Install Failed'
+		Abort "SQL Installation Failure. Please Try Again. If problems persist contact us for support."
+               # 1223 Means user aborted the SQL installer so we need to stop. More codes here: http://www.hiteksoftware.com/knowledge/articles/049.htm
+	SQLCorrupt:
+		ReadRegDWORD $0 HKLM Software\AutoSQL "SQLCorruptAttempt"
+			StrCmp $0 "1" SQLFailed
+		${Logs} 'SQL: Installer Corrupted, deleting current file and trying again.'
+		WriteRegDWORD HKLM Software\AutoSQL "SQLCorruptAttempt" "1"
+		Delete "$TEMP\AutoSQL\sqlexpress.exe"
+		Sleep 500
+		Goto PreSQLInstallerCheck
+	SQLCleared:
+	${Logs} 'SQL: Install Passed'
+
+	# Wait 5 seconds before attempting to launch SQLCMD, during development of this program i found the quickness of the installer was bypassing this as SQLCMD wasn't ready.
+	Sleep 5000
+
+	# This is what sets the SA password. We need to check for MSSQLSERVER instance name because you cannot connect to (local)\MSSQLSERVER
+	StrCmp $sqlinstance "MSSQLSERVER" 0 +3
+	nsExec::Exec '"$PROGRAMFILES64\Microsoft SQL Server\100\Tools\Binn\sqlcmd.exe" -S (local) -U sa -P PassWord123 -Q "ALTER LOGIN sa WITH PASSWORD = $\'$sapassword$\' UNLOCK,CHECK_POLICY = OFF, CHECK_EXPIRATION = OFF"'
+	GoTo +2
+	nsExec::Exec '"$PROGRAMFILES64\Microsoft SQL Server\100\Tools\Binn\sqlcmd.exe" -S (local)\$sqlinstance -U sa -P PassWord123 -Q "ALTER LOGIN sa WITH PASSWORD = $\'$sapassword$\' UNLOCK,CHECK_POLICY = OFF, CHECK_EXPIRATION = OFF"'
+
+	Delete "$TEMP\AutoSQL\SQLConfig.ini"
+	WriteRegDWORD HKLM Software\AutoSQL "SQLInstalled" "1"
+	${Logs} 'SQL: Successful'
+	SQLSkip:
+SectionEnd
+
+Section "${TITLE_SQL_2012}" SEC_SQL_2012
+	SetOutPath "$TEMP\AutoSQL"	; Temp output directory for files.
+	SetOverwrite ifnewer		; Allows overwriting the existing file if need be.
+	AddSize 2621440			; Displays the installation size.
+
+	${Logs} 'SQL: Check if instance previously installed with our installer.'
+	ReadRegDWORD $0 HKLM Software\AutoSQL "SQLInstalled"
+	StrCmp $0 "1" SQLSkip
+	${Logs} 'SQL: SQLInstall never used.'
+
+	${Logs} 'SQL: Check if installer already exists in $TEMP\AutoSQL'
+	StrCpy $SQLFileLoc "$TEMP\AutoSQL\sqlexpress.exe"
+	IfFileExists "$SQLFileLoc" PastSQLInstallerCheck
+	${Logs} 'SQL: No installer found.'
+
+	PreSQLInstallerCheck:
+
+	${If} ${RunningX64}
+		${Logs} 'SQL: Downloading 64-bit version'
+		inetc::get /caption "${TITLE_SQL_2012} 64-bit" /canceltext "Select File" ${DOWNLOAD_SQL2012_X64} "$SQLFileLoc" /END
+	${Else}
+		${Logs} 'SQL: Downloading 32-bit version'
+		inetc::get /caption "${TITLE_SQL_2012} 32-bit" /canceltext "Select File" ${DOWNLOAD_SQL2012_X86} "$SQLFileLoc" /END
 	${EndIf}
 	Pop $0
 	${Logs} 'SQL: Download status: $0'
@@ -205,9 +312,11 @@ Section "${TITLE_SQL_2008R2}" SEC_SQL_2008R2
 SectionEnd
 
 LangString DESC_SEC_SQL_2008R2 ${LANG_ENGLISH} "${DESC_SQL_2008R2}"
+LangString DESC_SEC_SQL_2012 ${LANG_ENGLISH} "${DESC_SQL_2012}"
 
 !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
 	!insertmacro MUI_DESCRIPTION_TEXT ${SEC_SQL_2008R2} $(DESC_SEC_SQL_2008R2)
+	!insertmacro MUI_DESCRIPTION_TEXT ${SEC_SQL_2012} $(DESC_SEC_SQL_2012)
 !insertmacro MUI_FUNCTION_DESCRIPTION_END
 
 Function .onInstSuccess
@@ -571,11 +680,11 @@ FunctionEnd
 # =========================================================================
 # Get the SQL Instance and SA Password.
 Function DemoUsername
-	SectionGetFlags ${SEC_SQL_2008R2} $0
-	IntCmp $0 ${SF_SELECTED} ShowForm SkipForm
-	ShowForm:
+	;SectionGetFlags ${SEC_SQL_2008R2} $0
+	;IntCmp $0 ${SF_SELECTED} ShowForm SkipForm
+	;ShowForm:
 		Call UserDataPage
-	SkipForm:
+	;SkipForm:
 FunctionEnd
 
 Function UserDataPage
