@@ -5,7 +5,7 @@ Var OSVersion
 Var SQLFileLoc
 
 # Update this to the location you have the nsi file currently.
-!define LOCAL_SAVE "D:\Gits\sqlinstall"
+!define LOCAL_SAVE "Z:\Projects\Automated-MS-SQL-Installer"
 
 !define /date MYTIMESTAMP "%Y-%m-%d %H:%M:%S"
 
@@ -672,24 +672,25 @@ Function .onInit
 	NextValue:
 	EnumRegValue $R2 HKLM "SYSTEM\CurrentControlSet\Control\Session Manager" $R3
 		StrCmp $R2 "" PostRebootCheck 0
-		StrCmp $R2 "PendingFileRenameOperations" 0 +3
+		StrCmp $R2 "PendingFileRenameOperations" 0 PendingNotFound
 			${Logs} 'Restart: PendingFileRenameOperations is present, typically means restart required.'
 			Goto FoundRestart
+		PendingNotFound:
 		IntOp $R3 $R3 + 1
 		Goto NextValue
 
 	FoundRestart:
 		${Logs} 'Reboot: System needs a restart.'
-		MessageBox MB_YESNO|MB_ICONSTOP "Your machine must be restarted before we can continue.$\r$\nDo you wish to do so now?" IDNO noreboot
-			ReadRegDWORD $0 HKLM Software\AutoSQL "SkipReboot"
-				StrCmp $0 "1" PostRebootCheck
+		;MessageBox MB_YESNO|MB_ICONSTOP "Your machine must be restarted before we can continue.$\r$\nDo you wish to do so now?" IDNO noreboot
+		;	ReadRegDWORD $0 HKLM Software\AutoSQL "SkipReboot"
+		;		StrCmp $0 "1" PostRebootCheck
 			WriteRegDWORD HKLM Software\AutoSQL "RebootRequired" "0"
 			${Logs} 'Reboot Check: Passed, creating startup shortcut to restart installer.'
 			CreateShortCut "$SMSTARTUP\AutoSQL Installation.lnk" "$EXEPATH"
 			Reboot
-		noreboot:
-			${Logs} 'Reboot: Failed, user selected No to restart.'
-			Abort
+		;noreboot:
+		;	${Logs} 'Reboot: Failed, user selected No to restart.'
+		;	Abort
 	PostRebootCheck:
 		${Logs} 'Reboot: Passed.'
 
