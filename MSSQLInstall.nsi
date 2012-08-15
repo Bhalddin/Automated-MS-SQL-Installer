@@ -40,8 +40,9 @@ ShowInstDetails show
 	!define DOWNLOAD_SQL2008R2_X86 "http://go.microsoft.com/fwlink/?LinkId=186785"	; 32-bit 2008 R2 Express
 	!define DOWNLOAD_SQL2008R2_X64 "http://go.microsoft.com/fwlink/?LinkId=186786"	; 64-bit 2008 R2 Express
 	
-	!define DOWNLOAD_SQL2012_X86 ""	; 32-bit 2012 Express
-	!define DOWNLOAD_SQL2012_X64 ""	; 64-bit 2012 Express
+	; No guarentee that these links will work beyond today.
+	!define DOWNLOAD_SQL2012_X86 "http://download.microsoft.com/download/8/D/D/8DD7BDBA-CEF7-4D8E-8C16-D9F69527F909/ENU/x86/SQLEXPRWT_x86_ENU.exe"	; 32-bit 2012 Express
+	!define DOWNLOAD_SQL2012_X64 "http://download.microsoft.com/download/8/D/D/8DD7BDBA-CEF7-4D8E-8C16-D9F69527F909/ENU/x64/SQLEXPRWT_x64_ENU.exe"	; 64-bit 2012 Express
 
 	# Example of local web server hosting SQL
 	;!define DOWNLOAD_SQL2008R2_X86 "http://192.168.2.20/installers/SQLEXPRWT_x86_ENU.exe"	; 32-bit 2008 R2 Express
@@ -82,10 +83,12 @@ ShowInstDetails show
 	!include "x64.nsh"		; Required for ability to check between 32 and 64 bit.
 	!include "FileFunc.nsh"		; Check File Size functions.
 	!include "CustomFunctions.nsh"	; Custom Functions
+	!include "Sections.nsh"		; Used for single-install selection.
 
 ; MUI Settings
 	!define MUI_COMPONENTSPAGE_SMALLDESC
 	!define MUI_ICON "${NSISDIR}\Contrib\Graphics\Icons\modern-install.ico"
+	!define SECTION_ON ${SF_SELECTED} # 0x1
 
 LangString UserData_TITLE ${LANG_ENGLISH} "Enter The Desired Password"
 LangString UserData_SUBTITLE ${LANG_ENGLISH} "What password shall we asign to sa?"
@@ -170,17 +173,19 @@ Section "${TITLE_SQL_2008R2}" SEC_SQL_2008R2
 		Goto SQLCorrupt
 	sqlmorethan:
 
-	File "${LOCAL_SAVE}\SQLConfig.ini"
+	File "${LOCAL_SAVE}\SQLConfig2008R2.ini"
 
 	${Logs} 'SQL: Launch Installer'
 	# If you go and change the password. Windows 7, Server 2008/2008R2 will error out with non-complex passwords. Which requires capitals, numbers, or special characters.
 	# My suggestion would be to leave it be as PassWord123 works, and change the password in the dialog that asks for it during install.
-	ExecWait '$SQLFileLoc /INSTANCENAME="$sqlinstance" /INSTANCEID="$sqlinstance" /SAPWD="PassWord123" /configurationfile="$TEMP\AutoSQL\SQLConfig.ini"' $1
+	ExecWait '$SQLFileLoc /INSTANCENAME="$sqlinstance" /INSTANCEID="$sqlinstance" /SAPWD="PassWord123" /configurationfile="$TEMP\AutoSQL\SQLConfig2008R2.ini"' $1
 
 	${Logs} 'SQL: Installer Exit Code: $1'
 	StrCmp $1 "0" SQLCleared
 	StrCmp $1 "2" SQLCorrupt
 	StrCmp $1 "1223" SQLFailed
+	StrCmp $1 "3010" SQLCleared
+	StrCmp $1 "3020" SQLCleared
 
 	SQLFailed:
 		${Logs} 'SQL: Install Failed'
@@ -206,7 +211,10 @@ Section "${TITLE_SQL_2008R2}" SEC_SQL_2008R2
 	GoTo +2
 	nsExec::Exec '"$PROGRAMFILES64\Microsoft SQL Server\100\Tools\Binn\sqlcmd.exe" -S (local)\$sqlinstance -U sa -P PassWord123 -Q "ALTER LOGIN sa WITH PASSWORD = $\'$sapassword$\' UNLOCK,CHECK_POLICY = OFF, CHECK_EXPIRATION = OFF"'
 
-	Delete "$TEMP\AutoSQL\SQLConfig.ini"
+	${Logs} 'SQL Instance: $sqlinstance'
+	${Logs} 'SQL Password: $sapassword'
+
+	Delete "$TEMP\AutoSQL\SQLConfig2008R2.ini"
 	WriteRegDWORD HKLM Software\AutoSQL "SQLInstalled" "1"
 	${Logs} 'SQL: Successful'
 	SQLSkip:
@@ -269,17 +277,19 @@ Section "${TITLE_SQL_2012}" SEC_SQL_2012
 		Goto SQLCorrupt
 	sqlmorethan:
 
-	File "${LOCAL_SAVE}\SQLConfig.ini"
+	File "${LOCAL_SAVE}\SQLConfig2012.ini"
 
 	${Logs} 'SQL: Launch Installer'
 	# If you go and change the password. Windows 7, Server 2008/2008R2 will error out with non-complex passwords. Which requires capitals, numbers, or special characters.
 	# My suggestion would be to leave it be as PassWord123 works, and change the password in the dialog that asks for it during install.
-	ExecWait '$SQLFileLoc /INSTANCENAME="$sqlinstance" /INSTANCEID="$sqlinstance" /SAPWD="PassWord123" /configurationfile="$TEMP\AutoSQL\SQLConfig.ini"' $1
+	ExecWait '$SQLFileLoc /INSTANCENAME="$sqlinstance" /INSTANCEID="$sqlinstance" /SAPWD="PassWord123" /configurationfile="$TEMP\AutoSQL\SQLConfig2012.ini"' $1
 
 	${Logs} 'SQL: Installer Exit Code: $1'
 	StrCmp $1 "0" SQLCleared
 	StrCmp $1 "2" SQLCorrupt
 	StrCmp $1 "1223" SQLFailed
+	StrCmp $1 "3010" SQLCleared
+	StrCmp $1 "3020" SQLCleared
 
 	SQLFailed:
 		${Logs} 'SQL: Install Failed'
@@ -301,11 +311,14 @@ Section "${TITLE_SQL_2012}" SEC_SQL_2012
 
 	# This is what sets the SA password. We need to check for MSSQLSERVER instance name because you cannot connect to (local)\MSSQLSERVER
 	StrCmp $sqlinstance "MSSQLSERVER" 0 +3
-	nsExec::Exec '"$PROGRAMFILES64\Microsoft SQL Server\100\Tools\Binn\sqlcmd.exe" -S (local) -U sa -P PassWord123 -Q "ALTER LOGIN sa WITH PASSWORD = $\'$sapassword$\' UNLOCK,CHECK_POLICY = OFF, CHECK_EXPIRATION = OFF"'
+	nsExec::Exec '"$PROGRAMFILES64\Microsoft SQL Server\110\Tools\Binn\sqlcmd.exe" -S (local) -U sa -P PassWord123 -Q "ALTER LOGIN sa WITH PASSWORD = $\'$sapassword$\' UNLOCK,CHECK_POLICY = OFF, CHECK_EXPIRATION = OFF"'
 	GoTo +2
-	nsExec::Exec '"$PROGRAMFILES64\Microsoft SQL Server\100\Tools\Binn\sqlcmd.exe" -S (local)\$sqlinstance -U sa -P PassWord123 -Q "ALTER LOGIN sa WITH PASSWORD = $\'$sapassword$\' UNLOCK,CHECK_POLICY = OFF, CHECK_EXPIRATION = OFF"'
+	nsExec::Exec '"$PROGRAMFILES64\Microsoft SQL Server\110\Tools\Binn\sqlcmd.exe" -S (local)\$sqlinstance -U sa -P PassWord123 -Q "ALTER LOGIN sa WITH PASSWORD = $\'$sapassword$\' UNLOCK,CHECK_POLICY = OFF, CHECK_EXPIRATION = OFF"'
 
-	Delete "$TEMP\AutoSQL\SQLConfig.ini"
+	${Logs} 'SQL Instance: $sqlinstance'
+	${Logs} 'SQL Password: $sapassword'
+
+	Delete "$TEMP\AutoSQL\SQLConfig2012.ini"
 	WriteRegDWORD HKLM Software\AutoSQL "SQLInstalled" "1"
 	${Logs} 'SQL: Successful'
 	SQLSkip:
@@ -326,7 +339,8 @@ Function .onInstSuccess
 	Delete "$TEMP\AutoSQL\Windows-PowerShell-x86.exe"
 	Delete "$TEMP\AutoSQL\Windows-PowerShell-x64.exe"
 	Delete "$TEMP\AutoSQL\dotnetx35setup.exe"
-	Delete "$TEMP\AutoSQL\SQLConfig.ini"
+	Delete "$TEMP\AutoSQL\SQLConfig2008R2.ini"
+	Delete "$TEMP\AutoSQL\SQLConfig2012.ini"
 	Delete "$TEMP\AutoSQL\sqlexpress.exe"
 	WriteRegDWORD HKLM Software\AutoSQL "Success" "1"
 	ReadRegDWORD $0 HKLM Software\AutoSQL "UACStatus"
@@ -373,6 +387,7 @@ Function .onInit
 	GetVersion::WindowsName
 		Pop $R0
 		StrCpy $OSVersion $R0
+		${Logs} 'OS: $R0'
 		StrCmp $R0 "Win32s"		OSFail
 		StrCmp $R0 "95 OSR2"		OSFail
 		StrCmp $R0 "95"			OSFail
@@ -390,7 +405,7 @@ Function .onInit
 		StrCmp $R0 "Server 2008 R2"	S2008R2Check
 		StrCmp $R0 "Vista"		VistaCheck
 		StrCmp $R0 "7"			W7Check
-		
+
 		${Logs} 'OS: Check failed pre-req-checks'
 		Abort
 
@@ -647,7 +662,7 @@ Function .onInit
 		Abort
 	OSPass:
 		WriteRegDWORD HKLM Software\AutoSQL "ComponentsDone" "1"
-		${Logs} 'OS: Passed'
+		${Logs} 'OS: $OSVersion Passed'
 
 	${Logs} 'Reboot: Checking if we need to reboot.'
 	 ReadRegDWORD $0 HKLM Software\AutoSQL "RebootRequired"
@@ -662,18 +677,31 @@ Function .onInit
 
 	FoundRestart:
 		${Logs} 'Reboot: System needs a restart.'
-		;MessageBox MB_YESNO|MB_ICONSTOP "Your machine must be restarted before we can continue.$\r$\nDo you wish to do so now?" IDNO noreboot
-		;	ReadRegDWORD $0 HKLM Software\AutoSQL "SkipReboot"
-		;		StrCmp $0 "1" PostRebootCheck
+		MessageBox MB_YESNO|MB_ICONSTOP "Your machine must be restarted before we can continue.$\r$\nDo you wish to do so now?" IDNO noreboot
+			ReadRegDWORD $0 HKLM Software\AutoSQL "SkipReboot"
+				StrCmp $0 "1" PostRebootCheck
 			WriteRegDWORD HKLM Software\AutoSQL "RebootRequired" "0"
 			${Logs} 'Reboot Check: Passed, creating startup shortcut to restart installer.'
 			CreateShortCut "$SMSTARTUP\AutoSQL Installation.lnk" "$EXEPATH"
 			Reboot
-		;noreboot:
-		;	${Logs} 'Reboot: Failed, user selected No to restart.'
-		;	Abort
+		noreboot:
+			${Logs} 'Reboot: Failed, user selected No to restart.'
+			Abort
 	PostRebootCheck:
 		${Logs} 'Reboot: Passed.'
+
+	Push $0
+
+	StrCpy $1 ${SEC_SQL_2008R2} ; Gotta remember which section we are at now...
+	SectionGetFlags ${SEC_SQL_2008R2} $0
+	IntOp $0 $0 | ${SECTION_ON}
+	SectionSetFlags ${SEC_SQL_2008R2} $0
+
+	SectionGetFlags ${SEC_SQL_2012} $0
+	IntOp $0 $0 & ${SECTION_OFF}
+	SectionSetFlags ${SEC_SQL_2012} $0
+
+	Pop $0
 FunctionEnd
 
 # CUSTOM PAGE.
@@ -698,8 +726,38 @@ Function UserDataPage
    !insertmacro MUI_INSTALLOPTIONS_READ $sqlinstance "UserData" "Field 4" "State"
 FunctionEnd
 
+Function .onSelChange
+  Push $0
+ 
+  ; Turn off old selected section
+  SectionGetFlags $1 $0
+  IntOp $0 $0 & ${SECTION_OFF}
+  SectionSetFlags $1 $0
+ 
+  ; Now remember the current selection
+  Push $2
+  StrCpy $2 $1
+ 
+  SectionGetFlags ${SEC_SQL_2008R2} $0
+  IntOp $0 $0 & ${SECTION_ON}
+  IntCmp $0 ${SECTION_ON} 0 +2 +2
+    StrCpy $1 ${SEC_SQL_2008R2}
+  SectionGetFlags ${SEC_SQL_2012} $0
+  IntOp $0 $0 & ${SECTION_ON}
+  IntCmp $0 ${SECTION_ON} 0 +2 +2
+    StrCpy $1 ${SEC_SQL_2012}
+ 
+  StrCmp $2 $1 0 +4 ; selection hasn't changed
+    SectionGetFlags $1 $0
+    IntOp $0 $0 | ${SECTION_ON}
+    SectionSetFlags $1 $0
+  Pop $2
+  Pop $0
+FunctionEnd
+
 Function .onInstFailed
-         Delete "$TEMP\AutoSQL\SQLConfig.ini"
+         Delete "$TEMP\AutoSQL\SQLConfig2008R2.ini"
+         Delete "$TEMP\AutoSQL\SQLConfig2012.ini"
          Delete "$TEMP\AutoSQL\icon.ico"
 	${Logs} 'Installation Failed.'
 FunctionEnd
