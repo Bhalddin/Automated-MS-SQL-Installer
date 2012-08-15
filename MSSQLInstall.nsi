@@ -379,6 +379,7 @@ Function .onInit
 	WriteRegStr HKLM Software\AutoSQL "InstallDate" "${MYTIMESTAMP}"
 	WriteRegDWORD HKLM Software\AutoSQL "SQLCorruptAttempt" "0"
 	WriteRegDWORD HKLM Software\AutoSQL "UACStatus" "0"
+	WriteRegDWORD HKLM Software\AutoSQL "RebootRequired" "0"
 
 	${Logs} 'INIT: Begin OS Check'
 	 ReadRegDWORD $0 HKLM Software\AutoSQL "ComponentsDone"
@@ -671,7 +672,9 @@ Function .onInit
 	NextValue:
 	EnumRegValue $R2 HKLM "SYSTEM\CurrentControlSet\Control\Session Manager" $R3
 		StrCmp $R2 "" PostRebootCheck 0
-		StrCmp $R2 "PendingFileRenameOperations" FoundRestart 0
+		StrCmp $R2 "PendingFileRenameOperations" 0 +3
+			${Logs} 'Restart: PendingFileRenameOperations is present, typically means restart required.'
+			Goto FoundRestart
 		IntOp $R3 $R3 + 1
 		Goto NextValue
 
