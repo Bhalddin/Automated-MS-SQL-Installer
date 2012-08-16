@@ -5,7 +5,7 @@ Var OSVersion
 Var SQLFileLoc
 
 # Update this to the location you have the nsi file currently.
-!define LOCAL_SAVE "Z:\Projects\Automated-MS-SQL-Installer"
+!define LOCAL_SAVE "D:\Gits\sqlinstall"
 
 !define /date MYTIMESTAMP "%Y-%m-%d %H:%M:%S"
 
@@ -25,7 +25,7 @@ ShowInstDetails show
 	# Just upload to your own server and substitute your information below.
 	# This works great for local server, saves you from downloading it from external sources
 	# and allows for local network speeds.
-	!define URL_BASE "http://files.rpdatasystems.ca/winupdates"
+	!define URL_BASE "http://files.rpdatasystems.ca"
 
 	#SQL 2008R2 with Advanced Services - SQLEXPRADV_X86 - http://go.microsoft.com/fwlink/?LinkId=186787
 	#SQL 2008R2 with Advanced Services - SQLEXPRADV_X64 - http://go.microsoft.com/fwlink/?LinkId=186788
@@ -90,15 +90,16 @@ ShowInstDetails show
 	!define MUI_ICON "${NSISDIR}\Contrib\Graphics\Icons\modern-install.ico"
 	!define SECTION_ON ${SF_SELECTED} # 0x1
 
-LangString UserData_TITLE ${LANG_ENGLISH} "Enter The Desired Password"
-LangString UserData_SUBTITLE ${LANG_ENGLISH} "What password shall we asign to sa?"
+LangString UserDataSAInfo_TITLE ${LANG_ENGLISH} "SQL Instance Information"
+LangString UserDataSAInfo_SUBTITLE ${LANG_ENGLISH} "Instance name and SA Password?"
 
 # Pages
 	!define MUI_CUSTOMFUNCTION_ABORT onUserAbort
+	!insertmacro MUI_PAGE_LICENSE "License.txt"
 	; Components page
 	!insertmacro MUI_PAGE_COMPONENTS
 	; Custom Page
-	Page custom DemoUsername
+	Page custom SAInstancePass
 	; Instfiles page
 	!insertmacro MUI_PAGE_INSTFILES
 	; Finish page
@@ -115,6 +116,297 @@ LangString UserData_SUBTITLE ${LANG_ENGLISH} "What password shall we asign to sa
 !define Logs '!insertmacro Logs'
 
 ; MUI end ------
+
+SectionGroup "Install Components"
+	Section "Windows Installer 4.5" SEC_INST45
+		GetVersion::WindowsName
+			Pop $R0
+			StrCpy $OSVersion $R0
+			StrCmp $R0 "XP"			XP32Check
+			StrCmp $R0 "XP x64"		XP64Check
+			StrCmp $R0 "Server 2003"	S2003Check
+			StrCmp $R0 "Server 2003 R2"	S2003R2Check
+			StrCmp $R0 "Server 2008"	S2008Check
+			StrCmp $R0 "Server 2008 R2"	S2008R2Check
+			StrCmp $R0 "Vista"		VistaCheck
+			StrCmp $R0 "7"			SEC_INSTALL_45_DONE
+		S2008R2Check:
+			${Logs} 'INIT: Windows Installer 4.5 not required for Server 2008R2'
+			Goto SEC_INSTALL_45_DONE
+		S2008Check:
+			${If} ${RunningX64}
+				inetc::get /POPUP "${TITLE_INST45}" /caption "${TITLE_INST45}" /nocancel ${DOWNLOAD_INSTALLER45_2008_X64} "$TEMP\AutoSQL\Windows-Installer45-x64.exe" /END
+				ExecWait "$TEMP\AutoSQL\Windows-Installer45-x64.exe /passive /norestart" $0
+			${Else}
+				inetc::get /POPUP "${TITLE_INST45}" /caption "${TITLE_INST45}" /nocancel ${DOWNLOAD_INSTALLER45_2008_X86} "$TEMP\AutoSQL\Windows-Installer45-x86.exe" /END
+				ExecWait "$TEMP\AutoSQL\Windows-Installer45-x86.exe /passive /norestart" $0
+			${EndIf}
+			Goto SEC_INSTALL_45_DONE
+		S2003Check:
+			${If} ${RunningX64}
+				inetc::get /POPUP "${TITLE_INST45}" /caption "${TITLE_INST45}" /nocancel ${DOWNLOAD_INSTALLER45_2003_X64} "$TEMP\AutoSQL\Windows2003-Installer45-x64.exe" /END
+				ExecWait "$TEMP\AutoSQL\Windows2003-Installer45-x64.exe /passive /norestart" $0
+				${Logs} '$0 - Windows Installer 4.5'
+			${Else}
+				inetc::get /POPUP "${TITLE_INST45}" /caption "${TITLE_INST45}" /nocancel ${DOWNLOAD_INSTALLER45_2003_X86} "$TEMP\AutoSQL\Windows-Installer45-x86.exe" /END
+				ExecWait "$TEMP\AutoSQL\Windows-Installer45-x86.exe /passive /norestart" $0
+				${Logs} '$0 - Windows Installer 4.5'
+			${EndIf}
+			Goto SEC_INSTALL_45_DONE
+		S2003R2Check:
+			${If} ${RunningX64}
+				inetc::get /POPUP "${TITLE_INST45}" /caption "${TITLE_INST45}" /nocancel ${DOWNLOAD_INSTALLER45_2003_X64} "$TEMP\AutoSQL\Windows-Installer45-x64.exe" /END
+				ExecWait "$TEMP\AutoSQL\Windows-Installer45-x64.exe /passive /norestart" $0
+				${Logs} '$0 - Windows Installer 4.5'
+			${Else}
+				inetc::get /POPUP "${TITLE_INST45}" /caption "${TITLE_INST45}" /nocancel ${DOWNLOAD_INSTALLER45_2003_X86} "$TEMP\AutoSQL\Windows-Installer45-x86.exe" /END
+				ExecWait "$TEMP\AutoSQL\Windows-Installer45-x86.exe /passive /norestart" $0
+				${Logs} '$0 - Windows Installer 4.5'
+			${EndIf}
+			Goto SEC_INSTALL_45_DONE
+		XP32Check:
+			inetc::get /POPUP "${TITLE_INST45}" /caption "${TITLE_INST45}" /nocancel ${DOWNLOAD_INSTALLER45_XP32_X86} "$TEMP\AutoSQL\Windows-Installer45-x86.exe" /END
+			ExecWait "$TEMP\AutoSQL\Windows-Installer45-x86.exe /passive /norestart" $0
+			${Logs} '$0 - Windows Installer 4.5'
+			Goto SEC_INSTALL_45_DONE
+		XP64Check:
+			inetc::get /POPUP "${TITLE_INST45}" /caption "${TITLE_INST45}" /nocancel ${DOWNLOAD_INSTALLER45_XP64_X64} "$TEMP\AutoSQL\Windows-Installer45-x64.exe" /END
+			ExecWait "$TEMP\AutoSQL\Windows-Installer45-x64.exe /passive /norestart" $0
+			${Logs} '$0 - Windows Installer 4.5'
+
+			WriteRegDWORD HKLM Software\AutoSQL "RebootRequired" "1"
+			Goto SEC_INSTALL_45_DONE
+		VistaCheck:
+			${If} ${RunningX64}
+				inetc::get /POPUP "${TITLE_INST45}" /caption "${TITLE_INST45}" /nocancel ${DOWNLOAD_INSTALLER45_VISTA_X64} "$TEMP\AutoSQL\Windows-Installer45-x64.exe" /END
+				ExecWait "$TEMP\AutoSQL\Windows-Installer45-x64.exe /passive /norestart" $0
+				${Logs} '$0 - Windows Installer 4.5'
+			${Else}
+				inetc::get /POPUP "${TITLE_INST45}" /caption "${TITLE_INST45}" /nocancel ${DOWNLOAD_INSTALLER45_VISTA_X86} "$TEMP\AutoSQL\Windows-Installer45-x86.exe" /END
+				ExecWait "$TEMP\AutoSQL\Windows-Installer45-x86.exe /passive /norestart" $0
+				${Logs} '$0 - Windows Installer 4.5'
+			${EndIf}
+			Goto SEC_INSTALL_45_DONE
+		SEC_INSTALL_45_DONE:
+	SectionEnd
+
+	Section "PowerShell 1.0" SEC_PS10
+		GetVersion::WindowsName
+			Pop $R0
+			StrCpy $OSVersion $R0
+			StrCmp $R0 "XP"			XP32Check
+			StrCmp $R0 "XP x64"		XP64Check
+			StrCmp $R0 "Server 2003"	S2003Check
+			StrCmp $R0 "Server 2003 R2"	S2003R2Check
+			StrCmp $R0 "Server 2008"	S2008Check
+			StrCmp $R0 "Server 2008 R2"	S2008R2Check
+			StrCmp $R0 "Vista"		VistaCheck
+			StrCmp $R0 "7"			SEC_PS_DONE
+		S2008R2Check:
+			${DisableX64FSRedirection}
+				${Logs} 'INIT: Enabling server features PowerShell'
+
+				nsExec::Exec '$WINDIR\system32\servermanagercmd.exe -i Powershell-ISE -a'
+				Pop $0
+				StrCmp $0 "0" 0 nextPS
+					${Logs} 'INIT: $0 - Powershell Feature successfully enabled.'
+					Goto beyondPS
+				nextPS:
+				StrCmp $0 "1003" 0 next2PS
+					${Logs} 'INIT: $0 - Powershell Feature already enabled.'
+					Goto beyondPS
+				next2PS:
+					${Logs} 'INIT: $0 - Powershell feature installation failure.'
+					MessageBox MB_OK|MB_ICONSTOP "Installation Failed. See log in $TEMP\AutoSQL for details"
+					Abort
+				beyondPS:
+			${EnableX64FSRedirection}
+			; PowerShell and .NET 3.5 both considered Feature installs for this OS so must request user enable those features
+			; Installer 5.0 default installed for R2
+			Goto SEC_PS_DONE
+		S2008Check:
+			${DisableX64FSRedirection}
+				${Logs} 'INIT: Enabling server features PowerShell'
+				nsExec::Exec '$WINDIR\system32\servermanagercmd.exe -i Powershell-ISE -a'
+				Pop $0
+				StrCmp $0 "0" 0 nextPS2
+					${Logs} 'INIT: $0 - Powershell Feature successfully enabled.'
+					Goto beyondPS
+				nextPS2:
+				StrCmp $0 "1003" 0 next2PS2
+					${Logs} 'INIT: $0 - Powershell Feature already enabled.'
+					Goto beyondPS2
+				next2PS2:
+					${Logs} 'INIT: $0 - Powershell feature installation failure.'
+					MessageBox MB_OK|MB_ICONSTOP "Installation Failed. See log in $TEMP\AutoSQL for details"
+					Abort
+				beyondPS2:
+			${EnableX64FSRedirection}
+			; PowerShell and .NET 3.5 both considered Feature installs for this OS so must request user enable those features
+			; Installer 5.0 default installed for R2
+			Goto SEC_PS_DONE
+		S2003Check:
+			${If} ${RunningX64}
+				inetc::get /POPUP "${TITLE_PS10}" /caption "${TITLE_PS10}" /nocancel ${DOWNLOAD_POWERSHELL_2003_X64} "$TEMP\AutoSQL\Windows-PowerShell-x64.exe" /END
+				ExecWait "$TEMP\AutoSQL\Windows-PowerShell-x64.exe /passive /norestart" $0
+				${Logs} '$0 - PowerShell Install'
+			${Else}
+				inetc::get /POPUP "${TITLE_PS10}" /caption "${TITLE_PS10}" /nocancel ${DOWNLOAD_POWERSHELL_2003_X86} "$TEMP\AutoSQL\Windows-PowerShell-x86.exe" /END
+				ExecWait "$TEMP\AutoSQL\Windows-PowerShell-x86.exe /passive /norestart" $0
+				${Logs} '$0 - PowerShell Install'
+
+			${EndIf}
+			Goto SEC_PS_DONE
+		S2003R2Check:
+			${If} ${RunningX64}
+				inetc::get /POPUP "${TITLE_PS10}" /caption "${TITLE_PS10}" /nocancel ${DOWNLOAD_POWERSHELL_2003_X64} "$TEMP\AutoSQL\Windows-PowerShell-x64.exe" /END
+				ExecWait "$TEMP\AutoSQL\Windows-PowerShell-x64.exe /passive /norestart" $0
+				${Logs} '$0 - PowerShell Install'
+			${Else}
+				inetc::get /POPUP "${TITLE_PS10}" /caption "${TITLE_PS10}" /nocancel ${DOWNLOAD_POWERSHELL_2003_X86} "$TEMP\AutoSQL\Windows-PowerShell-x86.exe" /END
+				ExecWait "$TEMP\AutoSQL\Windows-PowerShell-x86.exe /passive /norestart" $0
+				${Logs} '$0 - PowerShell Install'
+			${EndIf}
+			Goto SEC_PS_DONE
+		XP32Check:
+			inetc::get /POPUP "${TITLE_PS10}" /caption "${TITLE_PS10}" /nocancel ${DOWNLOAD_POWERSHELL_XP32_X86} "$TEMP\AutoSQL\Windows-PowerShell-x86.exe" /END
+			ExecWait "$TEMP\AutoSQL\Windows-PowerShell-x86.exe /passive /norestart" $0
+			${Logs} '$0 - PowerShell Install'
+
+			Goto SEC_PS_DONE
+		XP64Check:
+			inetc::get /POPUP "${TITLE_PS10}" /caption "${TITLE_PS10}" /nocancel ${DOWNLOAD_POWERSHELL_XP64_X64} "$TEMP\AutoSQL\Windows-PowerShell-x64.exe" /END
+			ExecWait "$TEMP\AutoSQL\Windows-PowerShell-x64.exe /passive /norestart" $0
+			${Logs} '$0 - PowerShell Install'
+
+			WriteRegDWORD HKLM Software\AutoSQL "RebootRequired" "1"
+			Goto SEC_PS_DONE
+		VistaCheck:
+			${If} ${RunningX64}
+				inetc::get /POPUP "${TITLE_PS10}" /caption "${TITLE_PS10}" /nocancel ${DOWNLOAD_POWERSHELL_VISTA_X64} "$TEMP\AutoSQL\Windows-PowerShell-x64.exe" /END
+				ExecWait "$TEMP\AutoSQL\Windows-PowerShell-x64.exe /passive /norestart" $0
+				${Logs} '$0 - PowerShell Install'
+			${Else}
+				inetc::get /POPUP "${TITLE_PS10}" /caption "${TITLE_PS10}" /nocancel ${DOWNLOAD_POWERSHELL_VISTA_X86} "$TEMP\AutoSQL\Windows-PowerShell-x86.exe" /END
+				ExecWait "$TEMP\AutoSQL\Windows-PowerShell-x86.exe /passive /norestart" $0
+				${Logs} '$0 - PowerShell Install'
+			${EndIf}
+			Goto SEC_PS_DONE
+
+		SEC_PS_DONE:
+	SectionEnd
+
+	Section ".NET 3.5" SEC_NET35
+		GetVersion::WindowsName
+			Pop $R0
+			StrCpy $OSVersion $R0
+			StrCmp $R0 "XP"			XP32Check
+			StrCmp $R0 "XP x64"		XP64Check
+			StrCmp $R0 "Server 2003"	S2003Check
+			StrCmp $R0 "Server 2003 R2"	S2003R2Check
+			StrCmp $R0 "Server 2008"	S2008Check
+			StrCmp $R0 "Server 2008 R2"	S2008R2Check
+			StrCmp $R0 "Vista"		VistaCheck
+			StrCmp $R0 "7"			W7Check
+
+		S2008R2Check:
+			${DisableX64FSRedirection}
+				${Logs} 'INIT: Enabling server features .NET and PowerShell'
+				nsExec::Exec '$WINDIR\system32\servermanagercmd.exe -i NET-Framework-Core -a'
+				Pop $0
+				StrCmp $0 "0" 0 nextNET
+					${Logs} 'INIT: $0 - .NET Feature successfully enabled.'
+					Goto beyondNET
+				nextNET:
+				StrCmp $0 "1003" 0 next2NET
+					${Logs} 'INIT: $0 - .NET feature already enabled.'
+					Goto beyondNET
+				next2NET:
+					${Logs} 'INIT: $0 - .NET feature installation failure.'
+					MessageBox MB_OK|MB_ICONSTOP "Installation Failed. See log in $TEMP\AutoSQL for details"
+					Abort
+				beyondNET:
+
+				nsExec::Exec '$WINDIR\system32\servermanagercmd.exe -i Powershell-ISE -a'
+				Pop $0
+				StrCmp $0 "0" 0 nextPS
+					${Logs} 'INIT: $0 - Powershell Feature successfully enabled.'
+					Goto beyondPS
+				nextPS:
+				StrCmp $0 "1003" 0 next2PS
+					${Logs} 'INIT: $0 - Powershell Feature already enabled.'
+					Goto beyondPS
+				next2PS:
+					${Logs} 'INIT: $0 - Powershell feature installation failure.'
+					MessageBox MB_OK|MB_ICONSTOP "Installation Failed. See log in $TEMP\AutoSQL for details"
+					Abort
+				beyondPS:
+			${EnableX64FSRedirection}
+			; PowerShell and .NET 3.5 both considered Feature installs for this OS so must request user enable those features
+			; Installer 5.0 default installed for R2
+			Goto SEC_NET_DONE
+		S2008Check:
+			${DisableX64FSRedirection}
+				${Logs} 'INIT: Enabling server features .NET'
+				nsExec::Exec '$WINDIR\system32\servermanagercmd.exe -i NET-Framework-Core -a'
+				Pop $0
+				StrCmp $0 "0" 0 nextNET2
+					${Logs} 'INIT: $0 - .NET Feature successfully enabled.'
+					Goto beyondNET2
+				nextNET2:
+				StrCmp $0 "1003" 0 next2NET2
+					${Logs} 'INIT: $0 - .NET feature already enabled.'
+					Goto beyondNET2
+				next2NET2:
+					${Logs} 'INIT: $0 - .NET feature installation failure.'
+					MessageBox MB_OK|MB_ICONSTOP "Installation Failed. See log in $TEMP\AutoSQL for details"
+					Abort
+				beyondNET2:
+			${EnableX64FSRedirection}
+			; PowerShell and .NET 3.5 both considered Feature installs for this OS so must request user enable those features
+			; Installer 5.0 default installed for R2
+			Goto SEC_NET_DONE
+		S2003Check:
+			inetc::get /POPUP "${TITLE_DOTNET35}" /caption "${TITLE_DOTNET35}" /nocancel ${DOWNLOAD_DOTNET35} "$TEMP\AutoSQL\dotnetx35setup.exe" /END
+			ExecWait "$TEMP\AutoSQL\dotnetx35setup.exe /passive /norestart" $0
+			${Logs} '$0 - .NET 3.5 Install'
+
+			Goto SEC_NET_DONE
+		S2003R2Check:
+			inetc::get /POPUP "${TITLE_DOTNET35}" /caption "${TITLE_DOTNET35}" /nocancel ${DOWNLOAD_DOTNET35} "$TEMP\AutoSQL\dotnetx35setup.exe" /END
+			ExecWait "$TEMP\AutoSQL\dotnetx35setup.exe /passive /norestart" $0
+			${Logs} '$0 - .NET 3.5 Install'
+
+			Goto SEC_NET_DONE
+		XP32Check:
+			inetc::get /POPUP "${TITLE_DOTNET35}" /caption "${TITLE_DOTNET35}" /nocancel ${DOWNLOAD_DOTNET35} "$TEMP\AutoSQL\dotnetx35setup.exe" /END
+			ExecWait "$TEMP\AutoSQL\dotnetx35setup.exe /passive /norestart" $0
+			${Logs} '$0 - .NET 3.5 Install'
+
+			Goto SEC_NET_DONE
+		XP64Check:
+			inetc::get /POPUP "${TITLE_DOTNET35}" /caption "${TITLE_DOTNET35}" /nocancel ${DOWNLOAD_DOTNET35} "$TEMP\AutoSQL\dotnetx35setup.exe" /END
+			ExecWait "$TEMP\AutoSQL\dotnetx35setup.exe /passive /norestart" $0
+			${Logs} '$0 - .NET 3.5 Install'
+
+			WriteRegDWORD HKLM Software\AutoSQL "RebootRequired" "1"
+			Goto SEC_NET_DONE
+		VistaCheck:
+			inetc::get /POPUP "${TITLE_DOTNET35}" /caption "${TITLE_DOTNET35}" /nocancel ${DOWNLOAD_DOTNET35} "$TEMP\AutoSQL\dotnetx35setup.exe" /END
+			ExecWait "$TEMP\AutoSQL\dotnetx35setup.exe /passive /norestart" $0
+			${Logs} '$0 - .NET 3.5 Install'
+			Goto SEC_NET_DONE
+		W7Check:
+			${If} ${RunningX64}
+				${Logs} 'INIT: OS - 7 64-bit'
+			${Else}
+				${Logs} 'INIT: OS - 7 32-bit'
+			${EndIf}
+
+		SEC_NET_DONE:
+			WriteRegDWORD HKLM Software\AutoSQL "ComponentsDone" "1"
+	SectionEnd
+SectionGroupEnd
 
 Section "${TITLE_SQL_2008R2}" SEC_SQL_2008R2
 	SetOutPath "$TEMP\AutoSQL"	; Temp output directory for files.
@@ -254,7 +546,7 @@ Section "${TITLE_SQL_2012}" SEC_SQL_2012
 
 		; Sometimes if the download goes too fast it doesnt return a code and errors out, this will check for the file first.
 		IfFileExists "$SQLFileLoc" PastSQLInstallerCheck
-
+	SQLDownloadAgain:
 		Dialogs::Open "SQL Installer (*.exe)|*.exe|" "1" "Select the SQL installation file." $EXEDIR ${VAR_9}
 
 		# User just closed the Open File dialog, just quit now.
@@ -287,6 +579,7 @@ Section "${TITLE_SQL_2012}" SEC_SQL_2012
 	${Logs} 'SQL: Installer Exit Code: $1'
 	StrCmp $1 "0" SQLCleared
 	StrCmp $1 "2" SQLCorrupt
+	StrCmp $1 "193" SQLDownloadAgain
 	StrCmp $1 "1223" SQLFailed
 	StrCmp $1 "3010" SQLCleared
 	StrCmp $1 "3020" SQLCleared
@@ -374,7 +667,7 @@ Function .onInit
 
         Delete "$SMSTARTUP\AutoSQL Installation.lnk"
 
-        !insertmacro MUI_INSTALLOPTIONS_EXTRACT_AS "UserData.ini" "UserData"
+        !insertmacro MUI_INSTALLOPTIONS_EXTRACT_AS "UserDataSAInfo.ini" "UserDataSAInfo"
 
 	WriteRegStr HKLM Software\AutoSQL "InstallDate" "${MYTIMESTAMP}"
 	WriteRegDWORD HKLM Software\AutoSQL "SQLCorruptAttempt" "0"
@@ -416,162 +709,37 @@ Function .onInit
 		${Else}
 			${Logs} 'INIT: OS - Server 2008 R2 32-bit'
 		${EndIf}
-		${DisableX64FSRedirection}
-			${Logs} 'INIT: Enabling server features .NET and PowerShell'
-			nsExec::Exec '$WINDIR\system32\servermanagercmd.exe -i NET-Framework-Core -a'
-			Pop $0
-			StrCmp $0 "0" 0 nextNET
-				${Logs} 'INIT: $0 - .NET Feature successfully enabled.'
-				Goto beyondNET
-			nextNET:
-			StrCmp $0 "1003" 0 next2NET
-				${Logs} 'INIT: $0 - .NET feature already enabled.'
-				Goto beyondNET
-			next2NET:
-				${Logs} 'INIT: $0 - .NET feature installation failure.'
-				MessageBox MB_OK|MB_ICONSTOP "Installation Failed. See log in $TEMP\AutoSQL for details"
-				Abort
-			beyondNET:
-
-			nsExec::Exec '$WINDIR\system32\servermanagercmd.exe -i Powershell-ISE -a'
-			Pop $0
-			StrCmp $0 "0" 0 nextPS
-				${Logs} 'INIT: $0 - Powershell Feature successfully enabled.'
-				Goto beyondPS
-			nextPS:
-			StrCmp $0 "1003" 0 next2PS
-				${Logs} 'INIT: $0 - Powershell Feature already enabled.'
-				Goto beyondPS
-			next2PS:
-				${Logs} 'INIT: $0 - Powershell feature installation failure.'
-				MessageBox MB_OK|MB_ICONSTOP "Installation Failed. See log in $TEMP\AutoSQL for details"
-				Abort
-			beyondPS:
-		${EnableX64FSRedirection}
 		; PowerShell and .NET 3.5 both considered Feature installs for this OS so must request user enable those features
 		; Installer 5.0 default installed for R2
 		Goto UACCheck
 	S2008Check:
 		${If} ${RunningX64}
 			${Logs} 'INIT: OS - Server 2008 64-bit'
-			inetc::get /POPUP "${TITLE_INST45}" /caption "${TITLE_INST45}" /nocancel ${DOWNLOAD_INSTALLER45_2008_X64} "$TEMP\AutoSQL\Windows-Installer45-x64.exe" /END
-			ExecWait "$TEMP\AutoSQL\Windows-Installer45-x64.exe /passive /norestart" $0
 		${Else}
 			${Logs} 'INIT: OS - Server 2008 32-bit'
-			inetc::get /POPUP "${TITLE_INST45}" /caption "${TITLE_INST45}" /nocancel ${DOWNLOAD_INSTALLER45_2008_X86} "$TEMP\AutoSQL\Windows-Installer45-x86.exe" /END
-			ExecWait "$TEMP\AutoSQL\Windows-Installer45-x86.exe /passive /norestart" $0
 		${EndIf}
-		${DisableX64FSRedirection}
-			${Logs} 'INIT: Enabling server features .NET and PowerShell'
-			nsExec::Exec '$WINDIR\system32\servermanagercmd.exe -i NET-Framework-Core -a'
-			Pop $0
-			StrCmp $0 "0" 0 nextNET2
-				${Logs} 'INIT: $0 - .NET Feature successfully enabled.'
-				Goto beyondNET2
-			nextNET2:
-			StrCmp $0 "1003" 0 next2NET2
-				${Logs} 'INIT: $0 - .NET feature already enabled.'
-				Goto beyondNET2
-			next2NET2:
-				${Logs} 'INIT: $0 - .NET feature installation failure.'
-				MessageBox MB_OK|MB_ICONSTOP "Installation Failed. See log in $TEMP\AutoSQL for details"
-				Abort
-			beyondNET2:
-
-			nsExec::Exec '$WINDIR\system32\servermanagercmd.exe -i Powershell-ISE -a'
-			Pop $0
-			StrCmp $0 "0" 0 nextPS2
-				${Logs} 'INIT: $0 - Powershell Feature successfully enabled.'
-				Goto beyondPS
-			nextPS2:
-			StrCmp $0 "1003" 0 next2PS2
-				${Logs} 'INIT: $0 - Powershell Feature already enabled.'
-				Goto beyondPS2
-			next2PS2:
-				${Logs} 'INIT: $0 - Powershell feature installation failure.'
-				MessageBox MB_OK|MB_ICONSTOP "Installation Failed. See log in $TEMP\AutoSQL for details"
-				Abort
-			beyondPS2:
-		${EnableX64FSRedirection}
 		; PowerShell and .NET 3.5 both considered Feature installs for this OS so must request user enable those features
 		; Installer 5.0 default installed for R2
 		Goto UACCheck
 	S2003Check:
 		${If} ${RunningX64}
 			${Logs} 'INIT: OS - Server 2003 64-bit'
-			inetc::get /POPUP "${TITLE_INST45}" /caption "${TITLE_INST45}" /nocancel ${DOWNLOAD_INSTALLER45_2003_X64} "$TEMP\AutoSQL\Windows2003-Installer45-x64.exe" /END
-			ExecWait "$TEMP\AutoSQL\Windows2003-Installer45-x64.exe /passive /norestart" $0
-			${Logs} '$0 - Windows Installer 4.5'
-
-			inetc::get /POPUP "${TITLE_PS10}" /caption "${TITLE_PS10}" /nocancel ${DOWNLOAD_POWERSHELL_2003_X64} "$TEMP\AutoSQL\Windows-PowerShell-x64.exe" /END
-			ExecWait "$TEMP\AutoSQL\Windows-PowerShell-x64.exe /passive /norestart" $0
-			${Logs} '$0 - PowerShell Install'
 		${Else}
 			${Logs} 'INIT: OS - Server 2003 32-bit'
-			inetc::get /POPUP "${TITLE_INST45}" /caption "${TITLE_INST45}" /nocancel ${DOWNLOAD_INSTALLER45_2003_X86} "$TEMP\AutoSQL\Windows-Installer45-x86.exe" /END
-			ExecWait "$TEMP\AutoSQL\Windows-Installer45-x86.exe /passive /norestart" $0
-			${Logs} '$0 - Windows Installer 4.5'
-
-			inetc::get /POPUP "${TITLE_PS10}" /caption "${TITLE_PS10}" /nocancel ${DOWNLOAD_POWERSHELL_2003_X86} "$TEMP\AutoSQL\Windows-PowerShell-x86.exe" /END
-			ExecWait "$TEMP\AutoSQL\Windows-PowerShell-x86.exe /passive /norestart" $0
-			${Logs} '$0 - PowerShell Install'
-
 		${EndIf}
-		inetc::get /POPUP "${TITLE_DOTNET35}" /caption "${TITLE_DOTNET35}" /nocancel ${DOWNLOAD_DOTNET35} "$TEMP\AutoSQL\dotnetx35setup.exe" /END
-		ExecWait "$TEMP\AutoSQL\dotnetx35setup.exe /passive /norestart" $0
-		${Logs} '$0 - .NET 3.5 Install'
 		Goto UACCheck
 	S2003R2Check:
 		${If} ${RunningX64}
 			${Logs} 'INIT: OS - Server 2003 R2 64-bit'
-			inetc::get /POPUP "${TITLE_INST45}" /caption "${TITLE_INST45}" /nocancel ${DOWNLOAD_INSTALLER45_2003_X64} "$TEMP\AutoSQL\Windows-Installer45-x64.exe" /END
-			ExecWait "$TEMP\AutoSQL\Windows-Installer45-x64.exe /passive /norestart" $0
-			${Logs} '$0 - Windows Installer 4.5'
-
-			inetc::get /POPUP "${TITLE_PS10}" /caption "${TITLE_PS10}" /nocancel ${DOWNLOAD_POWERSHELL_2003_X64} "$TEMP\AutoSQL\Windows-PowerShell-x64.exe" /END
-			ExecWait "$TEMP\AutoSQL\Windows-PowerShell-x64.exe /passive /norestart" $0
-			${Logs} '$0 - PowerShell Install'
 		${Else}
 			${Logs} 'INIT: OS - Server 2003 R2 32-bit'
-			inetc::get /POPUP "${TITLE_INST45}" /caption "${TITLE_INST45}" /nocancel ${DOWNLOAD_INSTALLER45_2003_X86} "$TEMP\AutoSQL\Windows-Installer45-x86.exe" /END
-			ExecWait "$TEMP\AutoSQL\Windows-Installer45-x86.exe /passive /norestart" $0
-			${Logs} '$0 - Windows Installer 4.5'
-
-			inetc::get /POPUP "${TITLE_PS10}" /caption "${TITLE_PS10}" /nocancel ${DOWNLOAD_POWERSHELL_2003_X86} "$TEMP\AutoSQL\Windows-PowerShell-x86.exe" /END
-			ExecWait "$TEMP\AutoSQL\Windows-PowerShell-x86.exe /passive /norestart" $0
-			${Logs} '$0 - PowerShell Install'
 		${EndIf}
-		inetc::get /POPUP "${TITLE_DOTNET35}" /caption "${TITLE_DOTNET35}" /nocancel ${DOWNLOAD_DOTNET35} "$TEMP\AutoSQL\dotnetx35setup.exe" /END
-		ExecWait "$TEMP\AutoSQL\dotnetx35setup.exe /passive /norestart" $0
-		${Logs} '$0 - .NET 3.5 Install'
 		Goto UACCheck
 	XP32Check:
 		${Logs} 'INIT: OS - XP 32-bit'
-		inetc::get /POPUP "${TITLE_INST45}" /caption "${TITLE_INST45}" /nocancel ${DOWNLOAD_INSTALLER45_XP32_X86} "$TEMP\AutoSQL\Windows-Installer45-x86.exe" /END
-		ExecWait "$TEMP\AutoSQL\Windows-Installer45-x86.exe /passive /norestart" $0
-		${Logs} '$0 - Windows Installer 4.5'
-
-		inetc::get /POPUP "${TITLE_PS10}" /caption "${TITLE_PS10}" /nocancel ${DOWNLOAD_POWERSHELL_XP32_X86} "$TEMP\AutoSQL\Windows-PowerShell-x86.exe" /END
-		ExecWait "$TEMP\AutoSQL\Windows-PowerShell-x86.exe /passive /norestart" $0
-		${Logs} '$0 - PowerShell Install'
-
-		inetc::get /POPUP "${TITLE_DOTNET35}" /caption "${TITLE_DOTNET35}" /nocancel ${DOWNLOAD_DOTNET35} "$TEMP\AutoSQL\dotnetx35setup.exe" /END
-		ExecWait "$TEMP\AutoSQL\dotnetx35setup.exe /passive /norestart" $0
-		${Logs} '$0 - .NET 3.5 Install'
 		Goto OSPass
 	XP64Check:
 		${Logs} 'INIT: OS - XP 64-bit'
-		inetc::get /POPUP "${TITLE_INST45}" /caption "${TITLE_INST45}" /nocancel ${DOWNLOAD_INSTALLER45_XP64_X64} "$TEMP\AutoSQL\Windows-Installer45-x64.exe" /END
-		ExecWait "$TEMP\AutoSQL\Windows-Installer45-x64.exe /passive /norestart" $0
-		${Logs} '$0 - Windows Installer 4.5'
-
-		inetc::get /POPUP "${TITLE_DOTNET35}" /caption "${TITLE_DOTNET35}" /nocancel ${DOWNLOAD_DOTNET35} "$TEMP\AutoSQL\dotnetx35setup.exe" /END
-		ExecWait "$TEMP\AutoSQL\dotnetx35setup.exe /passive /norestart" $0
-		${Logs} '$0 - .NET 3.5 Install'
-
-		inetc::get /POPUP "${TITLE_PS10}" /caption "${TITLE_PS10}" /nocancel ${DOWNLOAD_POWERSHELL_XP64_X64} "$TEMP\AutoSQL\Windows-PowerShell-x64.exe" /END
-		ExecWait "$TEMP\AutoSQL\Windows-PowerShell-x64.exe /passive /norestart" $0
-		${Logs} '$0 - PowerShell Install'
 
 		WriteRegDWORD HKLM Software\AutoSQL "RebootRequired" "1"
 		Goto OSPass
@@ -583,26 +751,10 @@ Function .onInit
 
 		${If} ${RunningX64}
 			${Logs} 'INIT: OS - Vista 64-bit'
-			inetc::get /POPUP "${TITLE_INST45}" /caption "${TITLE_INST45}" /nocancel ${DOWNLOAD_INSTALLER45_VISTA_X64} "$TEMP\AutoSQL\Windows-Installer45-x64.exe" /END
-			ExecWait "$TEMP\AutoSQL\Windows-Installer45-x64.exe /passive /norestart" $0
-			${Logs} '$0 - Windows Installer 4.5'
-
-			inetc::get /POPUP "${TITLE_PS10}" /caption "${TITLE_PS10}" /nocancel ${DOWNLOAD_POWERSHELL_VISTA_X64} "$TEMP\AutoSQL\Windows-PowerShell-x64.exe" /END
-			ExecWait "$TEMP\AutoSQL\Windows-PowerShell-x64.exe /passive /norestart" $0
-			${Logs} '$0 - PowerShell Install'
 		${Else}
 			${Logs} 'INIT: OS - Vista 32-bit'
-			inetc::get /POPUP "${TITLE_INST45}" /caption "${TITLE_INST45}" /nocancel ${DOWNLOAD_INSTALLER45_VISTA_X86} "$TEMP\AutoSQL\Windows-Installer45-x86.exe" /END
-			ExecWait "$TEMP\AutoSQL\Windows-Installer45-x86.exe /passive /norestart" $0
-			${Logs} '$0 - Windows Installer 4.5'
-
-			inetc::get /POPUP "${TITLE_PS10}" /caption "${TITLE_PS10}" /nocancel ${DOWNLOAD_POWERSHELL_VISTA_X86} "$TEMP\AutoSQL\Windows-PowerShell-x86.exe" /END
-			ExecWait "$TEMP\AutoSQL\Windows-PowerShell-x86.exe /passive /norestart" $0
-			${Logs} '$0 - PowerShell Install'
 		${EndIf}
-		inetc::get /POPUP "${TITLE_DOTNET35}" /caption "${TITLE_DOTNET35}" /nocancel ${DOWNLOAD_DOTNET35} "$TEMP\AutoSQL\dotnetx35setup.exe" /END
-		ExecWait "$TEMP\AutoSQL\dotnetx35setup.exe /passive /norestart" $0
-		${Logs} '$0 - .NET 3.5 Install'
+
 		Goto UACCheck
 	W7Check:
 		${If} ${RunningX64}
@@ -662,7 +814,6 @@ Function .onInit
 		${Logs} 'OS: Version Failed, $OSVersion is not compatible.'
 		Abort
 	OSPass:
-		WriteRegDWORD HKLM Software\AutoSQL "ComponentsDone" "1"
 		${Logs} 'OS: $OSVersion Passed'
 
 	${Logs} 'Reboot: Checking if we need to reboot.'
@@ -681,15 +832,15 @@ Function .onInit
 
 	FoundRestart:
 		${Logs} 'Reboot: System needs a restart.'
-		;MessageBox MB_YESNO|MB_ICONSTOP "Your machine must be restarted before we can continue.$\r$\nDo you wish to do so now?" IDNO noreboot
-		;	ReadRegDWORD $0 HKLM Software\AutoSQL "SkipReboot"
-		;		StrCmp $0 "1" PostRebootCheck
+		MessageBox MB_YESNO|MB_ICONSTOP "Your machine must be restarted before we can continue.$\r$\nDo you wish to do so now?" IDNO noreboot
+			ReadRegDWORD $0 HKLM Software\AutoSQL "SkipReboot"
+				StrCmp $0 "1" PostRebootCheck
 			WriteRegDWORD HKLM Software\AutoSQL "RebootRequired" "0"
 			${Logs} 'Reboot Check: Passed, creating startup shortcut to restart installer.'
 			CreateShortCut "$SMSTARTUP\AutoSQL Installation.lnk" "$EXEPATH"
 			Reboot
-		;noreboot:
-		;	${Logs} 'Reboot: Failed, user selected No to restart.'
+		noreboot:
+			${Logs} 'Reboot: Failed, user selected No to restart.'
 		;	Abort
 	PostRebootCheck:
 		${Logs} 'Reboot: Passed.'
@@ -711,23 +862,23 @@ FunctionEnd
 # CUSTOM PAGE.
 # =========================================================================
 # Get the SQL Instance and SA Password.
-Function DemoUsername
+Function SAInstancePass
 	;SectionGetFlags ${SEC_SQL_2008R2} $0
 	;IntCmp $0 ${SF_SELECTED} ShowForm SkipForm
 	;ShowForm:
-		Call UserDataPage
+		Call SAInstanceAndPassword
 	;SkipForm:
 FunctionEnd
 
-Function UserDataPage
-   !insertmacro MUI_HEADER_TEXT "$(UserData_TITLE)" "$(UserData_SUBTITLE)"
+Function SAInstanceAndPassword
+   !insertmacro MUI_HEADER_TEXT "$(UserDataSAInfo_TITLE)" "$(UserDataSAInfo_SUBTITLE)"
 
    # Display the page.
-   !insertmacro MUI_INSTALLOPTIONS_DISPLAY "UserData"
+   !insertmacro MUI_INSTALLOPTIONS_DISPLAY "UserDataSAInfo"
 
    # Get the user entered values.
-   !insertmacro MUI_INSTALLOPTIONS_READ $sapassword "UserData" "Field 2" "State"
-   !insertmacro MUI_INSTALLOPTIONS_READ $sqlinstance "UserData" "Field 4" "State"
+   !insertmacro MUI_INSTALLOPTIONS_READ $sapassword "UserDataSAInfo" "Field 2" "State"
+   !insertmacro MUI_INSTALLOPTIONS_READ $sqlinstance "UserDataSAInfo" "Field 4" "State"
 FunctionEnd
 
 Function .onSelChange

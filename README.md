@@ -1,6 +1,8 @@
 # Automated SQL Installer.
 
-Currently installs SQL 2008 R2 Express.
+Currently installs SQL 2008 R2 Express OR SQL 2012 Express.
+
+Bewarned, SQL 2012 Express does NOT install on Windows XP at all. Don't bother wasting the 800MB download to try.
 
 Current installers workflow:
 

@@ -1,0 +1,9 @@
+SQL 2008 R2 Will Install on Windows XP +
+SQL 2012 WILL NOT Install on Windows XP, don't bother wasting the bandwidth on the download.
+
+SQL Itself requires
+ - Windows Installer 4.5 minimum
+ - PowerShell 1.0
+ - .NET 3.5
+
+The components on the next page are optional, you may skip them if you know that you do not need them. Otherwise, install them or SQL will fail.
