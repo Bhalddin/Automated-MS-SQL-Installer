@@ -90,6 +90,14 @@ ShowInstDetails show
 	!define MUI_ICON "${NSISDIR}\Contrib\Graphics\Icons\modern-install.ico"
 	!define SECTION_ON ${SF_SELECTED} # 0x1
 
+VIProductVersion "1.0.0.1"
+	VIAddVersionKey "ProductName" "MSSQL Installer"
+	VIAddVersionKey "ProductVersion" "1.0"
+	VIAddVersionKey "CompanyName" "OSS"
+	VIAddVersionKey "LegalCopyright" "GPL"
+	VIAddVersionKey "FileDescription" "Automated Microsoft SQL Server Installer"
+	ViAddVersionKey "FileVersion" "1.0"
+
 LangString UserDataSAInfo_TITLE ${LANG_ENGLISH} "SQL Instance Information"
 LangString UserDataSAInfo_SUBTITLE ${LANG_ENGLISH} "Instance name and SA Password?"
 
@@ -442,7 +450,7 @@ Section "${TITLE_SQL_2008R2}" SEC_SQL_2008R2
 
 		; Sometimes if the download goes too fast it doesnt return a code and errors out, this will check for the file first.
 		IfFileExists "$SQLFileLoc" PastSQLInstallerCheck
-
+	SQLDownloadAgain:
 		Dialogs::Open "SQL Installer (*.exe)|*.exe|" "1" "Select the SQL installation file." $EXEDIR ${VAR_9}
 
 		# User just closed the Open File dialog, just quit now.
@@ -475,6 +483,7 @@ Section "${TITLE_SQL_2008R2}" SEC_SQL_2008R2
 	${Logs} 'SQL: Installer Exit Code: $1'
 	StrCmp $1 "0" SQLCleared
 	StrCmp $1 "2" SQLCorrupt
+	StrCmp $1 "193" SQLDownloadAgain
 	StrCmp $1 "1223" SQLFailed
 	StrCmp $1 "3010" SQLCleared
 	StrCmp $1 "3020" SQLCleared
